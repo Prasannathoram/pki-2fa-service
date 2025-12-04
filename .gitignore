@@ -138,3 +138,4 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 encrypted_seed.txt
+data/seed.txt
