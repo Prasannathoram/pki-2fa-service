@@ -1,0 +1,25 @@
+{
+  "dependencies": {
+    "express": "^5.2.1",
+    "otplib": "^12.0.1"
+  },
+  "name": "pki-2fa-service",
+  "version": "1.0.0",
+  "description": "Secure PKI-based 2FA microservice with Docker, RSA-4096,OAEP,PSS,TOTP",
+  "main": "decrypt_seed.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Prasannathoram/pki-2fa-service.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Prasannathoram/pki-2fa-service/issues"
+  },
+  "homepage": "https://github.com/Prasannathoram/pki-2fa-service#readme"
+}
