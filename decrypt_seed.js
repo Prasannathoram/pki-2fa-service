@@ -1,17 +1,17 @@
 import fs from "fs";
 import crypto from "crypto";
 
-// 1. Load encrypted seed from file
+// Load encrypted seed
 const encryptedBase64 = fs.readFileSync("encrypted_seed.txt", "utf8").trim();
 
-// 2. Load private key
+// Load private key
 const privateKeyPem = fs.readFileSync("student_private.pem", "utf8");
 
-// 3. Decode Base64 → Buffer
+// Convert Base64 → Buffer
 const encryptedBuffer = Buffer.from(encryptedBase64, "base64");
 
 try {
-    // 4. RSA-OAEP decryption with SHA-256
+
     const decryptedBuffer = crypto.privateDecrypt(
         {
             key: privateKeyPem,
@@ -21,22 +21,33 @@ try {
         encryptedBuffer
     );
 
-    // 5. Convert bytes → UTF-8 string
-    const decryptedSeed = decryptedBuffer.toString("utf8");
+    const decryptedSeed = decryptedBuffer.toString("utf8").trim();
 
     console.log("Decrypted seed:", decryptedSeed);
 
-    // 6. Validate hex format
+    // Validate seed format
     const regex = /^[0-9a-f]{64}$/;
+
     if (!regex.test(decryptedSeed)) {
-        console.error("❌ Invalid seed! Must be 64 hex characters.");
+        console.error("Invalid seed! Must be 64 hex characters.");
         process.exit(1);
     }
 
-    // 7. Save decrypted seed
-    fs.writeFileSync("decrypted_seed.txt", decryptedSeed);
-    console.log("✅ decrypted_seed.txt saved!");
+    // Ensure /data directory exists
+    if (!fs.existsSync("/data")) {
+        fs.mkdirSync("/data", { recursive: true });
+    }
+
+    // Save seed where evaluator expects it
+    fs.writeFileSync("/data/seed.txt", decryptedSeed, {
+        encoding: "utf8",
+        mode: 0o600
+    });
+
+    console.log("Seed saved to /data/seed.txt");
 
 } catch (err) {
-    console.error("❌ Decryption failed:", err.message);
+
+    console.error("Decryption failed:", err.message);
+
 }

@@ -12,7 +12,10 @@ services:
       - "8080:8080"
 
     volumes:
+      # Persist seed file
       - seed-data:/data
+
+      # Persist cron output
       - cron-output:/cron
 
       # Mount key files (read-only)
@@ -21,7 +24,7 @@ services:
       - ./instructor_public.pem:/app/instructor_public.pem:ro
 
     environment:
-      TZ: "UTC"
+      TZ: UTC
 
     restart: unless-stopped
 
