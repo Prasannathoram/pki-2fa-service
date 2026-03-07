@@ -2,7 +2,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 
 // 1. INSERT YOUR COMMIT HASH HERE
-const commitHash = "d50aa7822d7b4889b2f68f36803a2fe265fc7717";
+const commitHash = "419fcba6020567585ef7d99061cdb5ac1a6c0ab7";
 
 // 2. Load Student Private Key (for RSA-PSS-SHA256 signing)
 const studentPrivateKey = fs.readFileSync('./student_private.pem', 'utf8');

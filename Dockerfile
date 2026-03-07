@@ -2,25 +2,27 @@ FROM node:20-slim
 
 WORKDIR /app
 
+# install dependencies
 COPY package*.json ./
 RUN npm install
 
+# copy project files
 COPY . .
 
-# Install cron
+# install cron
 RUN apt-get update && apt-get install -y cron
 
-# Create directories
+# create required directories
 RUN mkdir -p /data /cron
 
-# Add cron job
-RUN echo "* * * * * /usr/local/bin/node /app/log_2fa_cron.js >> /cron/2fa.log 2>&1" > /etc/cron.d/2fa-cron
+# copy cron configuration
+COPY cron/2fa-cron /etc/cron.d/2fa-cron
 
-# Give permissions
+# set permissions
 RUN chmod 0644 /etc/cron.d/2fa-cron
 
-# Apply cron job
+# register cron job
 RUN crontab /etc/cron.d/2fa-cron
 
-# Start cron + server
+# start cron and server
 CMD cron && node server.js
