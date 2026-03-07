@@ -7,8 +7,7 @@ const GITHUB_REPO = "https://github.com/Prasannathoram/pki-2fa-service";
 const API_URL = "https://eajeyq4r3zljoq4rpovy2nthda0vtjqf.lambda-url.ap-south-1.on.aws";
 
 
-let publicKey = fs.readFileSync("student_public.pem", "utf8");
-publicKey = publicKey.replace(/\r?\n|\r/g, "");  
+let publicKey = fs.readFileSync("student_public.pem", "utf8"); 
 
 const requestBody = JSON.stringify({
   student_id: STUDENT_ID,

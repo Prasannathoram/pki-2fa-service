@@ -2,15 +2,21 @@
 
 import fs from "fs";
 import { authenticator } from "otplib";
+import base32 from "thirty-two";
 
 const SEED_PATH = "/data/seed.txt";
 
-// Configure TOTP (same as server)
+// Configure TOTP
 authenticator.options = {
   step: 30,
   digits: 6,
   algorithm: "sha1",
 };
+
+function hexToBase32(hex) {
+  const buffer = Buffer.from(hex, "hex");
+  return base32.encode(buffer).toString().replace(/=/g, "").toUpperCase();
+}
 
 try {
 
@@ -19,17 +25,14 @@ try {
     process.exit(0);
   }
 
-  // Read seed
-  const seed = fs.readFileSync(SEED_PATH, "utf8").trim();
+  const hexSeed = fs.readFileSync(SEED_PATH, "utf8").trim();
+  const base32Seed = hexToBase32(hexSeed);
 
-  // Generate TOTP directly from hex seed
-  const code = authenticator.generate(seed);
+  const code = authenticator.generate(base32Seed);
 
-  // Format timestamp
   const now = new Date();
   const timestamp = now.toISOString().replace("T", " ").slice(0, 19);
 
-  // Print EXACT format evaluator expects
   console.log(`${timestamp} - 2FA Code: ${code}`);
 
 } catch (err) {

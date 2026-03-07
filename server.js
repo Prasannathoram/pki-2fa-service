@@ -1,124 +1,111 @@
 import express from "express";
 import fs from "fs";
-import path from "path";
 import crypto from "crypto";
-import { fileURLToPath } from "url";
 import { authenticator } from "otplib";
+import base32 from "thirty-two";
 
-// Fix __dirname for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Setup Express
 const app = express();
 app.use(express.json());
 
-// Evaluator seed location
 const SEED_PATH = "/data/seed.txt";
 
-// Ensure /data exists
+// Ensure /data directory exists
 if (!fs.existsSync("/data")) {
   fs.mkdirSync("/data", { recursive: true });
 }
 
-// Configure TOTP
+// Configure TOTP exactly like evaluator
 authenticator.options = {
   step: 30,
   digits: 6,
-  algorithm: "sha1"
+  algorithm: "sha1",
+  window: 1
 };
 
-// ------------------------------------------------------
-// POST /decrypt-seed
-// ------------------------------------------------------
+function hexToBase32(hex) {
+  const buffer = Buffer.from(hex, "hex");
+  return base32.encode(buffer).toString().replace(/=/g, "").toUpperCase();
+}
+
+/*
+----------------------------------
+POST /decrypt-seed
+----------------------------------
+*/
 app.post("/decrypt-seed", (req, res) => {
-
   try {
-
     const { encrypted_seed } = req.body;
 
     if (!encrypted_seed) {
       return res.status(400).json({ error: "Missing encrypted_seed" });
     }
 
-    const privateKey = fs.readFileSync(
-      path.join(__dirname, "student_private.pem"),
-      "utf8"
-    );
+    const privateKey = fs.readFileSync("student_private.pem", "utf8");
 
-    const encryptedBuffer = Buffer.from(encrypted_seed, "base64");
-
-    const decryptedBytes = crypto.privateDecrypt(
+    const decrypted = crypto.privateDecrypt(
       {
         key: privateKey,
         padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
         oaepHash: "sha256"
       },
-      encryptedBuffer
+      Buffer.from(encrypted_seed, "base64")
     );
 
-    const decryptedHex = decryptedBytes.toString("utf8").trim();
+    const seed = decrypted.toString("utf8").trim();
 
-    if (!/^[0-9a-f]{64}$/i.test(decryptedHex)) {
-      return res.status(500).json({ error: "Invalid decrypted seed format" });
+    if (!/^[0-9a-f]{64}$/i.test(seed)) {
+      return res.status(500).json({ error: "Invalid seed format" });
     }
 
-    fs.writeFileSync(SEED_PATH, decryptedHex, {
-      encoding: "utf8",
-      mode: 0o600
-    });
+    fs.writeFileSync(SEED_PATH, seed, { encoding: "utf8" });
 
-    return res.json({ status: "ok" });
+    console.log("Seed saved to:", SEED_PATH);
+
+    res.json({ status: "ok" });
 
   } catch (err) {
-
     console.error("Decrypt Error:", err);
-
-    return res.status(500).json({ error: "Decryption failed" });
-
+    res.status(500).json({ error: "Decryption failed" });
   }
-
 });
 
-// ------------------------------------------------------
-// GET /generate-2fa
-// ------------------------------------------------------
+/*
+----------------------------------
+GET /generate-2fa
+----------------------------------
+*/
 app.get("/generate-2fa", (req, res) => {
-
   try {
 
     if (!fs.existsSync(SEED_PATH)) {
-      return res.status(500).json({ error: "Seed not decrypted yet" });
+      return res.status(500).json({ error: "Seed not found" });
     }
 
     const hexSeed = fs.readFileSync(SEED_PATH, "utf8").trim();
+    const base32Seed = hexToBase32(hexSeed);
 
-    // Generate TOTP directly from hex seed
-    const code = authenticator.generate(hexSeed);
+    const code = authenticator.generate(base32Seed);
 
     const now = Math.floor(Date.now() / 1000);
     const valid_for = 30 - (now % 30);
 
-    return res.json({
+    res.json({
       code,
       valid_for
     });
 
   } catch (err) {
-
-    console.error("Generation Error:", err);
-
-    return res.status(500).json({ error: "Generation error" });
-
+    console.error("Generate Error:", err);
+    res.status(500).json({ error: "Generation failed" });
   }
-
 });
 
-// ------------------------------------------------------
-// POST /verify-2fa
-// ------------------------------------------------------
+/*
+----------------------------------
+POST /verify-2fa
+----------------------------------
+*/
 app.post("/verify-2fa", (req, res) => {
-
   try {
 
     const { code } = req.body;
@@ -128,34 +115,24 @@ app.post("/verify-2fa", (req, res) => {
     }
 
     if (!fs.existsSync(SEED_PATH)) {
-      return res.status(500).json({ error: "Seed not decrypted yet" });
+      return res.status(500).json({ error: "Seed not found" });
     }
 
     const hexSeed = fs.readFileSync(SEED_PATH, "utf8").trim();
+    const base32Seed = hexToBase32(hexSeed);
 
-    const isValid = authenticator.check(code, hexSeed);
+    const valid = authenticator.check(code, base32Seed);
 
-    return res.json({
-      valid: isValid
-    });
+    res.json({ valid });
 
   } catch (err) {
-
     console.error("Verify Error:", err);
-
-    return res.status(500).json({ error: "Verification error" });
-
+    res.status(500).json({ error: "Verification failed" });
   }
-
 });
 
-// ------------------------------------------------------
-// Start Server
-// ------------------------------------------------------
-const PORT = process.env.PORT || 8080;
+const PORT = 8080;
 
 app.listen(PORT, () => {
-
   console.log(`Server running on http://localhost:${PORT}`);
-
 });
